@@ -47,7 +47,6 @@ function initElements() {
     elements.submitBtn = document.getElementById('submitBtn');
     elements.resetBtn = document.getElementById('resetBtn');
     elements.selectedCost = document.getElementById('selectedCost');
-    elements.selectedMode = document.getElementById('selectedMode');
     elements.recentEntries = document.getElementById('recentEntries');
     elements.toast = document.getElementById('toast');
     elements.onlineStatus = document.getElementById('onlineStatus');
@@ -237,8 +236,6 @@ function handleModeSelect(e) {
     elements.modeButtons.forEach(b => {
         b.classList.toggle('active', b.dataset.mode === mode);
     });
-    
-    elements.selectedMode.textContent = mode;
     
     updateSubmitButton();
 }
@@ -449,7 +446,6 @@ function resetForm() {
     });
     
     updateCostDisplay();
-    elements.selectedMode.textContent = '-';
     
     elements.submitBtn.disabled = true;
     elements.submitBtn.textContent = '📝 Record Entry';
