@@ -27,40 +27,46 @@ const state = {
     queuedEntries: []
 };
 
-// DOM Elements
-const elements = {
-    setupModal: document.getElementById('setupModal'),
-    instructionsModal: document.getElementById('instructionsModal'),
-    app: document.getElementById('app'),
-    scriptUrlInput: document.getElementById('scriptUrlInput'),
-    saveScriptUrlBtn: document.getElementById('saveScriptUrl'),
-    showInstructionsBtn: document.getElementById('showInstructions'),
-    closeInstructionsBtn: document.getElementById('closeInstructions'),
-    backToSetupBtn: document.getElementById('backToSetup'),
-    settingsBtn: document.getElementById('settingsBtn'),
-    currencyButtons: document.querySelectorAll('.currency-btn'),
-    costButtons: document.getElementById('costButtons'),
-    modeButtons: document.querySelectorAll('.mode-btn'),
-    submitBtn: document.getElementById('submitBtn'),
-    resetBtn: document.getElementById('resetBtn'),
-    selectedCost: document.getElementById('selectedCost'),
-    selectedMode: document.getElementById('selectedMode'),
-    recentEntries: document.getElementById('recentEntries'),
-    toast: document.getElementById('toast'),
-    onlineStatus: document.getElementById('onlineStatus'),
-    queuedCount: document.getElementById('queuedCount'),
+// DOM Elements - will be initialized when DOM is ready
+const elements = {};
+
+// Initialize DOM Elements
+function initElements() {
+    elements.setupModal = document.getElementById('setupModal');
+    elements.instructionsModal = document.getElementById('instructionsModal');
+    elements.app = document.getElementById('app');
+    elements.scriptUrlInput = document.getElementById('scriptUrlInput');
+    elements.saveScriptUrlBtn = document.getElementById('saveScriptUrl');
+    elements.showInstructionsBtn = document.getElementById('showInstructions');
+    elements.closeInstructionsBtn = document.getElementById('closeInstructions');
+    elements.backToSetupBtn = document.getElementById('backToSetup');
+    elements.settingsBtn = document.getElementById('settingsBtn');
+    elements.currencyButtons = document.querySelectorAll('.currency-btn');
+    elements.costButtons = document.getElementById('costButtons');
+    elements.modeButtons = document.querySelectorAll('.mode-btn');
+    elements.submitBtn = document.getElementById('submitBtn');
+    elements.resetBtn = document.getElementById('resetBtn');
+    elements.selectedCost = document.getElementById('selectedCost');
+    elements.selectedMode = document.getElementById('selectedMode');
+    elements.recentEntries = document.getElementById('recentEntries');
+    elements.toast = document.getElementById('toast');
+    elements.onlineStatus = document.getElementById('onlineStatus');
+    elements.queuedCount = document.getElementById('queuedCount');
     // Monthly totals elements
-    monthlyTotals: document.getElementById('monthlyTotals'),
-    monthName: document.getElementById('monthName'),
-    totalGBP: document.getElementById('totalGBP'),
-    totalEUR: document.getElementById('totalEUR'),
-    entryCount: document.getElementById('entryCount'),
-    refreshTotals: document.getElementById('refreshTotals')
-};
+    elements.monthlyTotals = document.getElementById('monthlyTotals');
+    elements.monthName = document.getElementById('monthName');
+    elements.totalGBP = document.getElementById('totalGBP');
+    elements.totalEUR = document.getElementById('totalEUR');
+    elements.entryCount = document.getElementById('entryCount');
+    elements.refreshTotals = document.getElementById('refreshTotals');
+}
 
 // Initialize App
 function init() {
     console.log('🚀 Initializing Travel Cost Tracker...');
+    
+    // Initialize DOM elements first
+    initElements();
     
     // Check for saved script URL - THIS IS NOW PERSISTENT
     const savedUrl = localStorage.getItem(CONFIG.STORAGE_KEYS.SCRIPT_URL);
@@ -126,9 +132,11 @@ function setupEventListeners() {
     elements.submitBtn.addEventListener('click', handleSubmit);
     elements.resetBtn.addEventListener('click', handleReset);
     
-    // Refresh totals
+    // Refresh totals (check if element exists)
     if (elements.refreshTotals) {
-        elements.refreshTotals.addEventListener('click', loadMonthlySummary);
+        elements.refreshTotals.addEventListener('click', () => {
+            loadMonthlySummary();
+        });
     }
     
     // Monthly summary refresh
