@@ -1,0 +1,509 @@
+/**
+ * Travel Cost Tracker PWA
+ * Main application logic
+ */
+
+// Configuration
+const CONFIG = {
+    STORAGE_KEYS: {
+        SCRIPT_URL: 'tct_script_url',
+        RECENT_ENTRIES: 'tct_recent_entries',
+        QUEUED_ENTRIES: 'tct_queued_entries'
+    },
+    MAX_RECENT_ENTRIES: 10,
+    COST_VALUES: {
+        GBP: [1, 5, 10, 50, 100],
+        EUR: [1, 5, 10, 50, 100]
+    }
+};
+
+// Application State
+const state = {
+    scriptUrl: null,
+    selectedCurrency: 'GBP',
+    selectedCost: null,
+    selectedMode: null,
+    isOnline: navigator.onLine,
+    queuedEntries: []
+};
+
+// DOM Elements
+const elements = {
+    setupModal: document.getElementById('setupModal'),
+    instructionsModal: document.getElementById('instructionsModal'),
+    app: document.getElementById('app'),
+    scriptUrlInput: document.getElementById('scriptUrlInput'),
+    saveScriptUrlBtn: document.getElementById('saveScriptUrl'),
+    showInstructionsBtn: document.getElementById('showInstructions'),
+    closeInstructionsBtn: document.getElementById('closeInstructions'),
+    backToSetupBtn: document.getElementById('backToSetup'),
+    settingsBtn: document.getElementById('settingsBtn'),
+    currencyButtons: document.querySelectorAll('.currency-btn'),
+    costButtons: document.getElementById('costButtons'),
+    modeButtons: document.querySelectorAll('.mode-btn'),
+    submitBtn: document.getElementById('submitBtn'),
+    selectedCost: document.getElementById('selectedCost'),
+    selectedMode: document.getElementById('selectedMode'),
+    recentEntries: document.getElementById('recentEntries'),
+    toast: document.getElementById('toast'),
+    onlineStatus: document.getElementById('onlineStatus'),
+    queuedCount: document.getElementById('queuedCount')
+};
+
+// Initialize App
+function init() {
+    console.log('🚀 Initializing Travel Cost Tracker...');
+    
+    // Check for saved script URL
+    state.scriptUrl = localStorage.getItem(CONFIG.STORAGE_KEYS.SCRIPT_URL);
+    
+    if (state.scriptUrl) {
+        showApp();
+    } else {
+        showSetup();
+    }
+    
+    // Load queued entries
+    loadQueuedEntries();
+    
+    // Setup event listeners
+    setupEventListeners();
+    
+    // Render cost buttons
+    renderCostButtons();
+    
+    // Update UI
+    updateOnlineStatus();
+    updateQueuedCount();
+    renderRecentEntries();
+    
+    // Register service worker
+    registerServiceWorker();
+}
+
+// Setup Event Listeners
+function setupEventListeners() {
+    // Setup modal
+    elements.saveScriptUrlBtn.addEventListener('click', handleSaveScriptUrl);
+    elements.showInstructionsBtn.addEventListener('click', showInstructions);
+    elements.closeInstructionsBtn.addEventListener('click', hideInstructions);
+    elements.backToSetupBtn.addEventListener('click', hideInstructions);
+    
+    // Settings
+    elements.settingsBtn.addEventListener('click', handleSettings);
+    
+    // Currency selection
+    elements.currencyButtons.forEach(btn => {
+        btn.addEventListener('click', handleCurrencySelect);
+    });
+    
+    // Mode selection
+    elements.modeButtons.forEach(btn => {
+        btn.addEventListener('click', handleModeSelect);
+    });
+    
+    // Submit
+    elements.submitBtn.addEventListener('click', handleSubmit);
+    
+    // Online/offline events
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Allow Enter key in setup
+    elements.scriptUrlInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleSaveScriptUrl();
+        }
+    });
+}
+
+// Render Cost Buttons
+function renderCostButtons() {
+    const costs = CONFIG.COST_VALUES[state.selectedCurrency];
+    const symbol = state.selectedCurrency === 'GBP' ? '£' : '€';
+    
+    elements.costButtons.innerHTML = costs.map(cost => `
+        <button class="cost-btn" data-cost="${cost}">
+            ${symbol}${cost}
+        </button>
+    `).join('');
+    
+    // Add event listeners
+    document.querySelectorAll('.cost-btn').forEach(btn => {
+        btn.addEventListener('click', handleCostSelect);
+    });
+}
+
+// Handle Currency Selection
+function handleCurrencySelect(e) {
+    const currency = e.target.dataset.currency;
+    state.selectedCurrency = currency;
+    state.selectedCost = null; // Reset cost selection
+    
+    // Update UI
+    elements.currencyButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.currency === currency);
+    });
+    
+    renderCostButtons();
+    elements.selectedCost.textContent = '-';
+    updateSubmitButton();
+}
+
+// Handle Cost Selection
+function handleCostSelect(e) {
+    const cost = parseFloat(e.target.dataset.cost);
+    state.selectedCost = cost;
+    
+    // Update UI
+    document.querySelectorAll('.cost-btn').forEach(btn => {
+        btn.classList.toggle('active', parseFloat(btn.dataset.cost) === cost);
+    });
+    
+    const symbol = state.selectedCurrency === 'GBP' ? '£' : '€';
+    elements.selectedCost.textContent = `${symbol}${cost}`;
+    
+    updateSubmitButton();
+}
+
+// Handle Mode Selection
+function handleModeSelect(e) {
+    const btn = e.currentTarget;
+    const mode = btn.dataset.mode;
+    state.selectedMode = mode;
+    
+    // Update UI
+    elements.modeButtons.forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === mode);
+    });
+    
+    elements.selectedMode.textContent = mode;
+    
+    updateSubmitButton();
+}
+
+// Update Submit Button State
+function updateSubmitButton() {
+    const isValid = state.selectedCost !== null && state.selectedMode !== null;
+    elements.submitBtn.disabled = !isValid;
+}
+
+// Handle Submit
+async function handleSubmit() {
+    if (!state.selectedCost || !state.selectedMode) {
+        return;
+    }
+    
+    // Disable button
+    elements.submitBtn.disabled = true;
+    elements.submitBtn.textContent = '⏳ Recording...';
+    
+    // Create entry
+    const entry = {
+        timestamp: new Date().toISOString(),
+        cost: state.selectedCost,
+        currency: state.selectedCurrency,
+        mode: state.selectedMode,
+        userAgent: navigator.userAgent
+    };
+    
+    try {
+        if (state.isOnline) {
+            // Try to submit online
+            await submitToSheet(entry);
+            showToast('✅ Entry recorded!', 'success');
+            
+            // Try to sync any queued entries
+            await syncQueuedEntries();
+        } else {
+            // Queue for later
+            queueEntry(entry);
+            showToast('📦 Entry queued (offline)', 'warning');
+        }
+        
+        // Save to recent entries
+        saveRecentEntry(entry);
+        
+        // Reset form
+        resetForm();
+        
+        // Update UI
+        renderRecentEntries();
+        updateQueuedCount();
+        
+    } catch (error) {
+        console.error('Submit error:', error);
+        
+        // Queue entry on error
+        queueEntry(entry);
+        showToast('⚠️ Queued for retry', 'warning');
+        
+        saveRecentEntry(entry);
+        renderRecentEntries();
+        updateQueuedCount();
+        resetForm();
+    }
+}
+
+// Submit to Google Sheet
+async function submitToSheet(entry) {
+    if (!state.scriptUrl) {
+        throw new Error('No script URL configured');
+    }
+    
+    const response = await fetch(state.scriptUrl, {
+        method: 'POST',
+        mode: 'no-cors', // Google Apps Script requires this
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(entry)
+    });
+    
+    // Note: no-cors mode means we can't read the response
+    // We'll assume success if no network error occurred
+    return response;
+}
+
+// Queue Entry for Later Sync
+function queueEntry(entry) {
+    state.queuedEntries.push({
+        ...entry,
+        queued: true
+    });
+    saveQueuedEntries();
+}
+
+// Sync Queued Entries
+async function syncQueuedEntries() {
+    if (!state.isOnline || state.queuedEntries.length === 0) {
+        return;
+    }
+    
+    console.log(`🔄 Syncing ${state.queuedEntries.length} queued entries...`);
+    
+    const entriesToSync = [...state.queuedEntries];
+    const failedEntries = [];
+    
+    for (const entry of entriesToSync) {
+        try {
+            await submitToSheet(entry);
+            console.log('✅ Synced entry:', entry);
+        } catch (error) {
+            console.error('❌ Failed to sync entry:', error);
+            failedEntries.push(entry);
+        }
+    }
+    
+    // Update queued entries with only failed ones
+    state.queuedEntries = failedEntries;
+    saveQueuedEntries();
+    updateQueuedCount();
+    
+    if (entriesToSync.length > failedEntries.length) {
+        const syncedCount = entriesToSync.length - failedEntries.length;
+        showToast(`✅ Synced ${syncedCount} queued entries`, 'success');
+    }
+}
+
+// Save Recent Entry
+function saveRecentEntry(entry) {
+    const recent = getRecentEntries();
+    recent.unshift(entry);
+    
+    // Keep only last N entries
+    const trimmed = recent.slice(0, CONFIG.MAX_RECENT_ENTRIES);
+    
+    localStorage.setItem(CONFIG.STORAGE_KEYS.RECENT_ENTRIES, JSON.stringify(trimmed));
+}
+
+// Get Recent Entries
+function getRecentEntries() {
+    const stored = localStorage.getItem(CONFIG.STORAGE_KEYS.RECENT_ENTRIES);
+    return stored ? JSON.parse(stored) : [];
+}
+
+// Render Recent Entries
+function renderRecentEntries() {
+    const recent = getRecentEntries();
+    
+    if (recent.length === 0) {
+        elements.recentEntries.innerHTML = '<p class="empty-state">No entries yet</p>';
+        return;
+    }
+    
+    elements.recentEntries.innerHTML = recent.map(entry => {
+        const symbol = entry.currency === 'GBP' ? '£' : '€';
+        const date = new Date(entry.timestamp);
+        const timeStr = date.toLocaleString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const queuedBadge = entry.queued ? '<span class="entry-badge">QUEUED</span>' : '';
+        const cardClass = entry.queued ? 'entry-card queued' : 'entry-card';
+        
+        return `
+            <div class="${cardClass}">
+                <div class="entry-header">
+                    <div class="entry-cost">${symbol}${entry.cost}</div>
+                    <div class="entry-mode">${entry.mode}</div>
+                </div>
+                <div class="entry-time">${timeStr}${queuedBadge}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Reset Form
+function resetForm() {
+    state.selectedCost = null;
+    state.selectedMode = null;
+    
+    document.querySelectorAll('.cost-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    elements.modeButtons.forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    elements.selectedCost.textContent = '-';
+    elements.selectedMode.textContent = '-';
+    
+    elements.submitBtn.disabled = true;
+    elements.submitBtn.textContent = '📝 Record Entry';
+}
+
+// Handle Online/Offline
+function handleOnline() {
+    state.isOnline = true;
+    updateOnlineStatus();
+    showToast('🌐 Back online', 'success');
+    
+    // Try to sync queued entries
+    syncQueuedEntries();
+}
+
+function handleOffline() {
+    state.isOnline = false;
+    updateOnlineStatus();
+    showToast('📡 Offline mode', 'warning');
+}
+
+// Update Online Status Display
+function updateOnlineStatus() {
+    elements.onlineStatus.textContent = state.isOnline ? '●' : '●';
+    elements.onlineStatus.className = `status-indicator ${state.isOnline ? 'online' : 'offline'}`;
+}
+
+// Update Queued Count Display
+function updateQueuedCount() {
+    const count = state.queuedEntries.length;
+    elements.queuedCount.textContent = count > 0 ? `${count} queued` : '';
+}
+
+// Load Queued Entries
+function loadQueuedEntries() {
+    const stored = localStorage.getItem(CONFIG.STORAGE_KEYS.QUEUED_ENTRIES);
+    state.queuedEntries = stored ? JSON.parse(stored) : [];
+}
+
+// Save Queued Entries
+function saveQueuedEntries() {
+    localStorage.setItem(
+        CONFIG.STORAGE_KEYS.QUEUED_ENTRIES,
+        JSON.stringify(state.queuedEntries)
+    );
+}
+
+// Show Toast
+function showToast(message, type = 'success') {
+    elements.toast.textContent = message;
+    elements.toast.className = `toast ${type} show`;
+    
+    setTimeout(() => {
+        elements.toast.classList.remove('show');
+    }, 3000);
+}
+
+// Setup Modal Functions
+function showSetup() {
+    elements.setupModal.classList.remove('hidden');
+    elements.app.classList.add('hidden');
+    elements.scriptUrlInput.focus();
+}
+
+function showApp() {
+    elements.setupModal.classList.add('hidden');
+    elements.app.classList.remove('hidden');
+}
+
+function showInstructions(e) {
+    e.preventDefault();
+    elements.setupModal.classList.add('hidden');
+    elements.instructionsModal.classList.remove('hidden');
+}
+
+function hideInstructions() {
+    elements.instructionsModal.classList.add('hidden');
+    elements.setupModal.classList.remove('hidden');
+}
+
+// Handle Save Script URL
+function handleSaveScriptUrl() {
+    const url = elements.scriptUrlInput.value.trim();
+    
+    if (!url) {
+        showToast('⚠️ Please enter a URL', 'error');
+        return;
+    }
+    
+    if (!url.startsWith('https://script.google.com/')) {
+        showToast('⚠️ Invalid Google Apps Script URL', 'error');
+        return;
+    }
+    
+    state.scriptUrl = url;
+    localStorage.setItem(CONFIG.STORAGE_KEYS.SCRIPT_URL, url);
+    
+    showToast('✅ Configuration saved!', 'success');
+    showApp();
+}
+
+// Handle Settings
+function handleSettings() {
+    const confirmed = confirm('Reset app configuration?\n\nThis will clear your saved Google Apps Script URL.');
+    
+    if (confirmed) {
+        localStorage.removeItem(CONFIG.STORAGE_KEYS.SCRIPT_URL);
+        state.scriptUrl = null;
+        showSetup();
+    }
+}
+
+// Register Service Worker
+async function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        try {
+            const registration = await navigator.serviceWorker.register('/service-worker.js');
+            console.log('✅ Service Worker registered:', registration);
+            
+            // Listen for updates
+            registration.addEventListener('updatefound', () => {
+                console.log('🔄 Service Worker update found');
+            });
+        } catch (error) {
+            console.error('❌ Service Worker registration failed:', error);
+        }
+    }
+}
+
+// Start app when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}

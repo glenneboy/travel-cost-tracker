@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="description" content="Track travel costs on the go">
+    <title>Travel Cost Tracker</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Travel Costs">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Setup Modal (shown on first load) -->
+    <div id="setupModal" class="modal">
+        <div class="modal-content">
+            <h2>🚀 Setup Required</h2>
+            <p>Enter your Google Apps Script URL to get started:</p>
+            <input 
+                type="url" 
+                id="scriptUrlInput" 
+                placeholder="https://script.google.com/macros/s/..."
+                autocomplete="off"
+            >
+            <button id="saveScriptUrl" class="btn btn-primary">Save & Continue</button>
+            <p class="help-text">
+                Don't have one? <a href="#" id="showInstructions">View setup instructions</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Instructions Modal -->
+    <div id="instructionsModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" id="closeInstructions">×</button>
+            <h2>📋 Setup Instructions</h2>
+            <ol class="instructions-list">
+                <li>Create a new Google Sheet</li>
+                <li>Add headers: Timestamp, Cost, Currency, Mode, UserAgent</li>
+                <li>Go to Extensions → Apps Script</li>
+                <li>Paste the backend code (see README.md)</li>
+                <li>Deploy → New deployment → Web app</li>
+                <li>Execute as: Me</li>
+                <li>Who has access: Anyone</li>
+                <li>Copy the Web app URL and paste it here</li>
+            </ol>
+            <button class="btn btn-primary" id="backToSetup">Back to Setup</button>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="hidden">
+        <!-- Header -->
+        <header>
+            <h1>💰 Travel Costs</h1>
+            <button id="settingsBtn" class="icon-btn" title="Settings">⚙️</button>
+        </header>
+
+        <!-- Status Bar -->
+        <div id="statusBar" class="status-bar">
+            <span id="onlineStatus" class="status-indicator">●</span>
+            <span id="queuedCount"></span>
+        </div>
+
+        <!-- Currency Selector -->
+        <div class="currency-selector">
+            <button class="currency-btn active" data-currency="GBP">£ GBP</button>
+            <button class="currency-btn" data-currency="EUR">€ EUR</button>
+        </div>
+
+        <!-- Cost Buttons -->
+        <section class="section">
+            <h2>Select Amount</h2>
+            <div class="cost-grid" id="costButtons">
+                <!-- Populated by JS -->
+            </div>
+            <div class="selected-display">
+                Selected: <span id="selectedCost">-</span>
+            </div>
+        </section>
+
+        <!-- Transport Mode -->
+        <section class="section">
+            <h2>Transport Mode</h2>
+            <div class="mode-grid">
+                <button class="mode-btn" data-mode="Flight">
+                    <span class="icon">✈️</span>
+                    <span>Flight</span>
+                </button>
+                <button class="mode-btn" data-mode="Train">
+                    <span class="icon">🚂</span>
+                    <span>Train</span>
+                </button>
+                <button class="mode-btn" data-mode="Taxi">
+                    <span class="icon">🚕</span>
+                    <span>Taxi</span>
+                </button>
+                <button class="mode-btn" data-mode="Bus">
+                    <span class="icon">🚌</span>
+                    <span>Bus</span>
+                </button>
+            </div>
+            <div class="selected-display">
+                Mode: <span id="selectedMode">-</span>
+            </div>
+        </section>
+
+        <!-- Submit Button -->
+        <button id="submitBtn" class="btn btn-primary btn-large" disabled>
+            📝 Record Entry
+        </button>
+
+        <!-- Recent Entries -->
+        <section class="section">
+            <h2>Recent Entries</h2>
+            <div id="recentEntries" class="recent-entries">
+                <p class="empty-state">No entries yet</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>
