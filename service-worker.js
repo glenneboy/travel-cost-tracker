@@ -5,13 +5,13 @@
 
 const CACHE_NAME = 'travel-cost-tracker-v2'; // UPDATED VERSION - forces cache refresh
 const ASSETS_TO_CACHE = [
-    '/',
-    '/index.html',
-    '/styles.css',
-    '/app.js',
-    '/manifest.json',
-    '/icons/icon-192.png',
-    '/icons/icon-512.png'
+    './',
+    './index.html',
+    './styles.css',
+    './app.js',
+    './manifest.json',
+    './icons/icon-192.png',
+    './icons/icon-512.png'
 ];
 
 // Install event - cache assets

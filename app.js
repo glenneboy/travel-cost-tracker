@@ -529,7 +529,8 @@ function handleSettings() {
 async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
-            const registration = await navigator.serviceWorker.register('/service-worker.js');
+            // Use relative path for GitHub Pages compatibility
+            const registration = await navigator.serviceWorker.register('./service-worker.js');
             console.log('✅ Service Worker registered:', registration);
             
             // Listen for updates
@@ -538,6 +539,7 @@ async function registerServiceWorker() {
             });
         } catch (error) {
             console.error('❌ Service Worker registration failed:', error);
+            // Non-critical error - app still works without SW
         }
     }
 }
