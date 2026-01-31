@@ -469,6 +469,7 @@ function showSetup() {
 
 function showApp() {
     elements.setupModal.classList.add('hidden');
+    elements.instructionsModal.classList.add('hidden');
     elements.app.classList.remove('hidden');
 }
 
