@@ -3,7 +3,7 @@
  * Handles offline functionality and caching
  */
 
-const CACHE_NAME = 'travel-cost-tracker-v1';
+const CACHE_NAME = 'travel-cost-tracker-v2'; // UPDATED VERSION - forces cache refresh
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -16,7 +16,7 @@ const ASSETS_TO_CACHE = [
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
-    console.log('🔧 Service Worker: Installing...');
+    console.log('🔧 Service Worker: Installing v2...');
     
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -25,7 +25,7 @@ self.addEventListener('install', (event) => {
                 return cache.addAll(ASSETS_TO_CACHE);
             })
             .then(() => {
-                console.log('✅ Service Worker: Installed');
+                console.log('✅ Service Worker: Installed v2');
                 return self.skipWaiting();
             })
     );
@@ -33,7 +33,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-    console.log('🚀 Service Worker: Activating...');
+    console.log('🚀 Service Worker: Activating v2...');
     
     event.waitUntil(
         caches.keys()
@@ -48,13 +48,13 @@ self.addEventListener('activate', (event) => {
                 );
             })
             .then(() => {
-                console.log('✅ Service Worker: Activated');
+                console.log('✅ Service Worker: Activated v2');
                 return self.clients.claim();
             })
     );
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - Network first for app.js to ensure we get updates
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     
@@ -63,6 +63,28 @@ self.addEventListener('fetch', (event) => {
         return;
     }
     
+    // Network first strategy for JavaScript files to ensure updates
+    if (request.url.endsWith('.js')) {
+        event.respondWith(
+            fetch(request)
+                .then((response) => {
+                    // Cache the updated version
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME)
+                        .then((cache) => {
+                            cache.put(request, responseToCache);
+                        });
+                    return response;
+                })
+                .catch(() => {
+                    // Fall back to cache if network fails
+                    return caches.match(request);
+                })
+        );
+        return;
+    }
+    
+    // Cache first for other assets
     event.respondWith(
         caches.match(request)
             .then((cachedResponse) => {

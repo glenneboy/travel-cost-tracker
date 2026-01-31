@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Travel Cost Tracker</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1rem;
+            background: #f8fafc;
+        }
+        h1 {
+            color: #2563eb;
+        }
+        .section {
+            background: white;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        pre {
+            background: #1e293b;
+            color: #10b981;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.875rem;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        .danger {
+            background: #ef4444;
+        }
+        .danger:hover {
+            background: #dc2626;
+        }
+        .success {
+            color: #10b981;
+            font-weight: 600;
+        }
+        .error {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 1rem;
+            margin: 0.5rem 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug Tool</h1>
+    
+    <div class="section">
+        <h2>📦 localStorage Status</h2>
+        <pre id="localStorageData">Loading...</pre>
+        <button onclick="refreshData()">🔄 Refresh</button>
+    </div>
+    
+    <div class="section">
+        <h2>💾 Manually Set Script URL</h2>
+        <p>If the app keeps asking for the URL, try setting it manually here:</p>
+        <input 
+            type="url" 
+            id="manualUrl" 
+            placeholder="https://script.google.com/macros/s/..."
+        >
+        <br>
+        <button onclick="saveManualUrl()">💾 Save URL</button>
+        <p id="saveResult"></p>
+    </div>
+    
+    <div class="section">
+        <h2>🧹 Clear Data</h2>
+        <button class="danger" onclick="clearScriptUrl()">Clear Script URL Only</button>
+        <button class="danger" onclick="clearAllData()">Clear All App Data</button>
+        <button class="danger" onclick="clearServiceWorker()">Unregister Service Worker</button>
+    </div>
+    
+    <div class="section">
+        <h2>ℹ️ Browser Info</h2>
+        <pre id="browserInfo">Loading...</pre>
+    </div>
+    
+    <div class="section">
+        <a href="index.html">← Back to App</a>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'tct_script_url';
+        
+        function refreshData() {
+            // Show localStorage contents
+            const data = {
+                scriptUrl: localStorage.getItem(STORAGE_KEY),
+                recentEntries: localStorage.getItem('tct_recent_entries'),
+                queuedEntries: localStorage.getItem('tct_queued_entries'),
+                allKeys: Object.keys(localStorage),
+                totalItems: localStorage.length
+            };
+            
+            document.getElementById('localStorageData').textContent = 
+                JSON.stringify(data, null, 2);
+            
+            // Show browser info
+            const browserInfo = {
+                userAgent: navigator.userAgent,
+                cookieEnabled: navigator.cookieEnabled,
+                onLine: navigator.onLine,
+                storageQuota: 'checking...'
+            };
+            
+            document.getElementById('browserInfo').textContent = 
+                JSON.stringify(browserInfo, null, 2);
+                
+            // Check storage quota
+            if (navigator.storage && navigator.storage.estimate) {
+                navigator.storage.estimate().then(estimate => {
+                    browserInfo.storageQuota = {
+                        usage: Math.round(estimate.usage / 1024) + ' KB',
+                        quota: Math.round(estimate.quota / 1024 / 1024) + ' MB'
+                    };
+                    document.getElementById('browserInfo').textContent = 
+                        JSON.stringify(browserInfo, null, 2);
+                });
+            }
+        }
+        
+        function saveManualUrl() {
+            const url = document.getElementById('manualUrl').value.trim();
+            const result = document.getElementById('saveResult');
+            
+            if (!url) {
+                result.innerHTML = '<span class="error">❌ Please enter a URL</span>';
+                return;
+            }
+            
+            if (!url.startsWith('https://script.google.com/')) {
+                result.innerHTML = '<span class="error">❌ Invalid Google Apps Script URL</span>';
+                return;
+            }
+            
+            try {
+                localStorage.setItem(STORAGE_KEY, url);
+                const saved = localStorage.getItem(STORAGE_KEY);
+                
+                if (saved === url) {
+                    result.innerHTML = '<span class="success">✅ URL saved successfully!</span>';
+                    refreshData();
+                } else {
+                    result.innerHTML = '<span class="error">❌ Save verification failed</span>';
+                }
+            } catch (e) {
+                result.innerHTML = '<span class="error">❌ Error: ' + e.message + '</span>';
+            }
+        }
+        
+        function clearScriptUrl() {
+            if (confirm('Clear the saved Script URL?')) {
+                localStorage.removeItem(STORAGE_KEY);
+                alert('Script URL cleared');
+                refreshData();
+            }
+        }
+        
+        function clearAllData() {
+            if (confirm('Clear ALL app data? This cannot be undone.')) {
+                localStorage.clear();
+                alert('All data cleared');
+                refreshData();
+            }
+        }
+        
+        async function clearServiceWorker() {
+            if (confirm('Unregister Service Worker?')) {
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (let registration of registrations) {
+                        await registration.unregister();
+                    }
+                    alert('Service Worker unregistered. Please reload the page.');
+                } else {
+                    alert('Service Workers not supported');
+                }
+            }
+        }
+        
+        // Auto-refresh on load
+        refreshData();
+    </script>
+</body>
+</html>

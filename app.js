@@ -56,11 +56,17 @@ function init() {
     console.log('🚀 Initializing Travel Cost Tracker...');
     
     // Check for saved script URL - THIS IS NOW PERSISTENT
-    state.scriptUrl = localStorage.getItem(CONFIG.STORAGE_KEYS.SCRIPT_URL);
+    const savedUrl = localStorage.getItem(CONFIG.STORAGE_KEYS.SCRIPT_URL);
+    console.log('💾 Saved URL from localStorage:', savedUrl);
+    console.log('🔑 Storage key:', CONFIG.STORAGE_KEYS.SCRIPT_URL);
+    
+    state.scriptUrl = savedUrl;
     
     if (state.scriptUrl) {
+        console.log('✅ Found saved URL, showing app');
         showApp();
     } else {
+        console.log('❌ No saved URL, showing setup');
         showSetup();
     }
     
@@ -481,6 +487,8 @@ function hideInstructions() {
 function handleSaveScriptUrl() {
     const url = elements.scriptUrlInput.value.trim();
     
+    console.log('💾 Attempting to save URL:', url);
+    
     if (!url) {
         showToast('⚠️ Please enter a URL', 'error');
         return;
@@ -494,6 +502,12 @@ function handleSaveScriptUrl() {
     // Save to state AND localStorage for persistence
     state.scriptUrl = url;
     localStorage.setItem(CONFIG.STORAGE_KEYS.SCRIPT_URL, url);
+    
+    // Verify it was saved
+    const savedUrl = localStorage.getItem(CONFIG.STORAGE_KEYS.SCRIPT_URL);
+    console.log('✅ URL saved to localStorage:', savedUrl);
+    console.log('🔑 Storage key used:', CONFIG.STORAGE_KEYS.SCRIPT_URL);
+    console.log('📦 All localStorage keys:', Object.keys(localStorage));
     
     showToast('✅ Configuration saved!', 'success');
     showApp();
