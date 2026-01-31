@@ -139,6 +139,12 @@ function setupEventListeners() {
         });
     }
     
+    // Toggle recent entries
+    const recentToggle = document.getElementById('recentEntriesToggle');
+    if (recentToggle) {
+        recentToggle.addEventListener('click', toggleRecentEntries);
+    }
+    
     // Online/offline events
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -392,10 +398,25 @@ function getRecentEntries() {
 // Render Recent Entries
 function renderRecentEntries() {
     const recent = getRecentEntries();
+    const recentSection = document.getElementById('recentEntriesSection');
+    const recentCount = document.getElementById('recentEntriesCount');
     
     if (recent.length === 0) {
-        elements.recentEntries.innerHTML = '<p class="empty-state">No entries yet</p>';
+        // Hide the section when there are no entries
+        if (recentSection) {
+            recentSection.style.display = 'none';
+        }
         return;
+    }
+    
+    // Show the section when there are entries
+    if (recentSection) {
+        recentSection.style.display = 'block';
+    }
+    
+    // Update count
+    if (recentCount) {
+        recentCount.textContent = `(${recent.length})`;
     }
     
     elements.recentEntries.innerHTML = recent.map(entry => {
@@ -587,15 +608,23 @@ async function loadMonthlySummary() {
         const result = await response.json();
         console.log('📊 Monthly totals response:', result);
         
+        // Check if we got the old API response (needs update)
+        if (result.status === 'ok' && result.message && !result.success) {
+            console.error('⚠️ OLD API VERSION DETECTED');
+            showToast('⚠️ Please update your Google Apps Script', 'warning');
+            displayMonthlySummary(null);
+            return;
+        }
+        
         if (result.success && result.data) {
             displayMonthlySummary(result.data);
         } else {
             console.error('Failed to load monthly totals:', result.message);
-            displayMonthlySummary(null); // Show empty state
+            displayMonthlySummary(null);
         }
     } catch (error) {
         console.error('Error loading monthly totals:', error);
-        displayMonthlySummary(null); // Show empty state
+        displayMonthlySummary(null);
     } finally {
         // Remove loading state
         if (elements.monthlyTotals) {
@@ -633,6 +662,24 @@ function getMonthName() {
                         'July', 'August', 'September', 'October', 'November', 'December'];
     const now = new Date();
     return `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+// Toggle Recent Entries Section
+function toggleRecentEntries() {
+    const recentEntries = document.getElementById('recentEntries');
+    const toggleIcon = document.getElementById('toggleIcon');
+    
+    if (!recentEntries || !toggleIcon) return;
+    
+    const isCollapsed = recentEntries.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+        recentEntries.classList.remove('collapsed');
+        toggleIcon.classList.add('expanded');
+    } else {
+        recentEntries.classList.add('collapsed');
+        toggleIcon.classList.remove('expanded');
+    }
 }
 
 // Register Service Worker
