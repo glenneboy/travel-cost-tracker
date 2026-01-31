@@ -27,7 +27,7 @@ body {
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
-    padding-bottom: 1rem;
+    padding-bottom: 6rem;
     overflow-x: hidden;
 }
 
@@ -516,6 +516,7 @@ header h1 {
     padding: 1rem;
     font-size: 1.0625rem;
     margin: 0.75rem;
+    margin-bottom: 5rem;
 }
 
 /* Recent Entries */
@@ -526,17 +527,19 @@ header h1 {
     right: 0;
     margin: 0;
     border-radius: 16px 16px 0 0;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-    max-height: 60vh;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
+    max-height: 50vh;
     display: flex;
     flex-direction: column;
-    z-index: 50;
+    z-index: 100;
+    background: var(--surface);
 }
 
 .recent-section .section-header {
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--border);
     user-select: none;
+    background: var(--surface);
 }
 
 .recent-section h2 {
@@ -560,7 +563,8 @@ header h1 {
     gap: 0.625rem;
     padding: 0.75rem;
     overflow-y: auto;
-    max-height: calc(60vh - 60px);
+    max-height: calc(50vh - 60px);
+    background: var(--surface);
 }
 
 .recent-entries.collapsed {
@@ -771,6 +775,10 @@ header h1 {
     .monthly-totals {
         padding: 0.875rem 1rem;
     }
+    
+    body {
+        padding-bottom: 7rem;
+    }
 }
 
 @media (min-width: 768px) {
@@ -778,6 +786,7 @@ header h1 {
         max-width: 600px;
         margin: 0 auto;
         box-shadow: var(--shadow-lg);
+        padding-bottom: 8rem;
     }
     
     header h1 {
@@ -806,6 +815,10 @@ header h1 {
         max-width: 600px;
         left: 50%;
         transform: translateX(-50%);
+    }
+    
+    .btn-large {
+        margin-bottom: 6rem;
     }
 }
 
