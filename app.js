@@ -139,9 +139,6 @@ function setupEventListeners() {
         });
     }
     
-    // Monthly summary refresh
-    elements.refreshSummary.addEventListener('click', handleRefreshSummary);
-    
     // Online/offline events
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -636,19 +633,6 @@ function getMonthName() {
                         'July', 'August', 'September', 'October', 'November', 'December'];
     const now = new Date();
     return `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-}
-
-// Handle Refresh Summary Button
-async function handleRefreshSummary() {
-    elements.refreshSummary.classList.add('spinning');
-    
-    await loadMonthlySummary();
-    
-    setTimeout(() => {
-        elements.refreshSummary.classList.remove('spinning');
-    }, 600);
-    
-    showToast('📊 Summary refreshed', 'success');
 }
 
 // Register Service Worker
