@@ -1,131 +1,53 @@
 /**
  * Service Worker for Travel Cost Tracker PWA
- * Handles offline functionality and caching
+ * Lightweight version optimized for mobile performance
  */
 
-const CACHE_NAME = 'travel-cost-tracker-v2'; // UPDATED VERSION - forces cache refresh
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'tct-v3';
+const ESSENTIAL_ASSETS = [
     './',
     './index.html',
     './styles.css',
-    './app.js',
-    './manifest.json',
-    './icons/icon-192.png',
-    './icons/icon-512.png'
+    './app.js'
 ];
 
-// Install event - cache assets
+// Quick install
 self.addEventListener('install', (event) => {
-    console.log('🔧 Service Worker: Installing v2...');
-    
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('📦 Service Worker: Caching assets');
-                return cache.addAll(ASSETS_TO_CACHE);
-            })
-            .then(() => {
-                console.log('✅ Service Worker: Installed v2');
-                return self.skipWaiting();
-            })
+            .then(cache => cache.addAll(ESSENTIAL_ASSETS))
+            .then(() => self.skipWaiting())
     );
 });
 
-// Activate event - clean up old caches
+// Fast activate
 self.addEventListener('activate', (event) => {
-    console.log('🚀 Service Worker: Activating v2...');
-    
     event.waitUntil(
         caches.keys()
-            .then((cacheNames) => {
-                return Promise.all(
-                    cacheNames.map((cacheName) => {
-                        if (cacheName !== CACHE_NAME) {
-                            console.log('🗑️ Service Worker: Deleting old cache:', cacheName);
-                            return caches.delete(cacheName);
-                        }
-                    })
-                );
-            })
-            .then(() => {
-                console.log('✅ Service Worker: Activated v2');
-                return self.clients.claim();
-            })
+            .then(keys => Promise.all(
+                keys.map(key => key !== CACHE_NAME ? caches.delete(key) : null)
+            ))
+            .then(() => self.clients.claim())
     );
 });
 
-// Fetch event - Network first for app.js to ensure we get updates
+// Network-first (faster on mobile with good connection)
 self.addEventListener('fetch', (event) => {
-    const { request } = event;
-    
-    // Skip Google Apps Script requests - always go to network
-    if (request.url.includes('script.google.com')) {
+    // Skip API calls
+    if (event.request.url.includes('script.google.com')) {
         return;
     }
     
-    // Network first strategy for JavaScript files to ensure updates
-    if (request.url.endsWith('.js')) {
-        event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    // Cache the updated version
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME)
-                        .then((cache) => {
-                            cache.put(request, responseToCache);
-                        });
-                    return response;
-                })
-                .catch(() => {
-                    // Fall back to cache if network fails
-                    return caches.match(request);
-                })
-        );
-        return;
-    }
-    
-    // Cache first for other assets
     event.respondWith(
-        caches.match(request)
-            .then((cachedResponse) => {
-                if (cachedResponse) {
-                    console.log('📦 Service Worker: Serving from cache:', request.url);
-                    return cachedResponse;
+        fetch(event.request)
+            .then(response => {
+                // Cache in background, don't block
+                if (response.status === 200 && event.request.method === 'GET') {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
                 }
-                
-                console.log('🌐 Service Worker: Fetching from network:', request.url);
-                return fetch(request)
-                    .then((response) => {
-                        // Cache successful responses
-                        if (response && response.status === 200) {
-                            const responseToCache = response.clone();
-                            caches.open(CACHE_NAME)
-                                .then((cache) => {
-                                    cache.put(request, responseToCache);
-                                });
-                        }
-                        return response;
-                    });
+                return response;
             })
-            .catch((error) => {
-                console.error('❌ Service Worker: Fetch failed:', error);
-                // Return offline page if available
-                return caches.match('/index.html');
-            })
+            .catch(() => caches.match(event.request))
     );
 });
-
-// Background sync event (for future enhancement)
-self.addEventListener('sync', (event) => {
-    if (event.tag === 'sync-entries') {
-        console.log('🔄 Service Worker: Background sync triggered');
-        event.waitUntil(syncEntries());
-    }
-});
-
-// Helper function for background sync
-async function syncEntries() {
-    // This would communicate with the main app to sync queued entries
-    // For now, it's a placeholder for future enhancement
-    console.log('🔄 Syncing queued entries...');
-}

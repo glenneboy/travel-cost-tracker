@@ -63,23 +63,16 @@ function initElements() {
 
 // Initialize App
 function init() {
-    console.log('🚀 Initializing Travel Cost Tracker...');
-    
     // Initialize DOM elements first
     initElements();
     
     // Check for saved script URL - THIS IS NOW PERSISTENT
     const savedUrl = localStorage.getItem(CONFIG.STORAGE_KEYS.SCRIPT_URL);
-    console.log('💾 Saved URL from localStorage:', savedUrl);
-    console.log('🔑 Storage key:', CONFIG.STORAGE_KEYS.SCRIPT_URL);
-    
     state.scriptUrl = savedUrl;
     
     if (state.scriptUrl) {
-        console.log('✅ Found saved URL, showing app');
         showApp();
     } else {
-        console.log('❌ No saved URL, showing setup');
         showSetup();
     }
     
@@ -98,9 +91,11 @@ function init() {
     renderRecentEntries();
     updateCostDisplay();
     
-    // Load monthly summary if we have a script URL
+    // Load monthly summary after a brief delay (improves perceived performance)
     if (state.scriptUrl) {
-        loadMonthlySummary();
+        setTimeout(() => {
+            loadMonthlySummary();
+        }, 100);
     }
     
     // Register service worker
@@ -598,7 +593,6 @@ async function loadMonthlySummary() {
         
         // Fetch monthly totals from Google Apps Script
         const url = `${state.scriptUrl}?action=monthlyTotals&year=${year}&month=${month}&t=${Date.now()}`;
-        console.log('📊 Fetching monthly totals from:', url);
         
         const response = await fetch(url, {
             method: 'GET',
@@ -606,7 +600,6 @@ async function loadMonthlySummary() {
         });
         
         const result = await response.json();
-        console.log('📊 Monthly totals response:', result);
         
         // Check if we got the old API response (needs update)
         if (result.status === 'ok' && result.message && !result.success) {
