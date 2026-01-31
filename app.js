@@ -48,7 +48,14 @@ const elements = {
     recentEntries: document.getElementById('recentEntries'),
     toast: document.getElementById('toast'),
     onlineStatus: document.getElementById('onlineStatus'),
-    queuedCount: document.getElementById('queuedCount')
+    queuedCount: document.getElementById('queuedCount'),
+    // Monthly totals elements
+    monthlyTotals: document.getElementById('monthlyTotals'),
+    monthName: document.getElementById('monthName'),
+    totalGBP: document.getElementById('totalGBP'),
+    totalEUR: document.getElementById('totalEUR'),
+    entryCount: document.getElementById('entryCount'),
+    refreshTotals: document.getElementById('refreshTotals')
 };
 
 // Initialize App
@@ -85,6 +92,11 @@ function init() {
     renderRecentEntries();
     updateCostDisplay();
     
+    // Load monthly summary if we have a script URL
+    if (state.scriptUrl) {
+        loadMonthlySummary();
+    }
+    
     // Register service worker
     registerServiceWorker();
 }
@@ -113,6 +125,14 @@ function setupEventListeners() {
     // Submit and Reset
     elements.submitBtn.addEventListener('click', handleSubmit);
     elements.resetBtn.addEventListener('click', handleReset);
+    
+    // Refresh totals
+    if (elements.refreshTotals) {
+        elements.refreshTotals.addEventListener('click', loadMonthlySummary);
+    }
+    
+    // Monthly summary refresh
+    elements.refreshSummary.addEventListener('click', handleRefreshSummary);
     
     // Online/offline events
     window.addEventListener('online', handleOnline);
@@ -250,6 +270,9 @@ async function handleSubmit() {
             
             // Try to sync any queued entries
             await syncQueuedEntries();
+            
+            // Refresh monthly summary
+            loadMonthlySummary();
         } else {
             // Queue for later
             queueEntry(entry);
@@ -338,6 +361,9 @@ async function syncQueuedEntries() {
     if (entriesToSync.length > failedEntries.length) {
         const syncedCount = entriesToSync.length - failedEntries.length;
         showToast(`✅ Synced ${syncedCount} queued entries`, 'success');
+        
+        // Refresh monthly summary after syncing
+        loadMonthlySummary();
     }
 }
 
@@ -524,6 +550,97 @@ function handleSettings() {
         elements.scriptUrlInput.value = '';
         showSetup();
     }
+}
+
+// Load Monthly Summary
+async function loadMonthlySummary() {
+    if (!state.scriptUrl) {
+        console.log('No script URL configured');
+        displayMonthlySummary(null);
+        return;
+    }
+    
+    // Show loading state
+    if (elements.monthlyTotals) {
+        elements.monthlyTotals.classList.add('loading');
+    }
+    
+    try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        
+        // Fetch monthly totals from Google Apps Script
+        const url = `${state.scriptUrl}?action=monthlyTotals&year=${year}&month=${month}&t=${Date.now()}`;
+        console.log('📊 Fetching monthly totals from:', url);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            mode: 'cors'
+        });
+        
+        const result = await response.json();
+        console.log('📊 Monthly totals response:', result);
+        
+        if (result.success && result.data) {
+            displayMonthlySummary(result.data);
+        } else {
+            console.error('Failed to load monthly totals:', result.message);
+            displayMonthlySummary(null); // Show empty state
+        }
+    } catch (error) {
+        console.error('Error loading monthly totals:', error);
+        displayMonthlySummary(null); // Show empty state
+    } finally {
+        // Remove loading state
+        if (elements.monthlyTotals) {
+            elements.monthlyTotals.classList.remove('loading');
+        }
+    }
+}
+
+// Display Monthly Summary
+function displayMonthlySummary(data) {
+    if (!data) {
+        // Show empty state
+        elements.monthName.textContent = getMonthName();
+        elements.totalGBP.textContent = '£0.00';
+        elements.totalEUR.textContent = '€0.00';
+        elements.entryCount.textContent = '0 entries';
+        return;
+    }
+    
+    // Update month name
+    elements.monthName.textContent = data.monthName;
+    
+    // Update totals
+    elements.totalGBP.textContent = `£${data.totalGBP.toFixed(2)}`;
+    elements.totalEUR.textContent = `€${data.totalEUR.toFixed(2)}`;
+    
+    // Update entry count
+    const entryText = data.entryCount === 1 ? 'entry' : 'entries';
+    elements.entryCount.textContent = `${data.entryCount} ${entryText} this month`;
+}
+
+// Get Current Month Name
+function getMonthName() {
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    const now = new Date();
+    return `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+// Handle Refresh Summary Button
+async function handleRefreshSummary() {
+    elements.refreshSummary.classList.add('spinning');
+    
+    await loadMonthlySummary();
+    
+    setTimeout(() => {
+        elements.refreshSummary.classList.remove('spinning');
+    }, 600);
+    
+    showToast('📊 Summary refreshed', 'success');
 }
 
 // Register Service Worker

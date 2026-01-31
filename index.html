@@ -72,6 +72,49 @@
             <span id="queuedCount"></span>
         </div>
 
+        <!-- Monthly Totals -->
+        <div id="monthlyTotals" class="monthly-totals">
+            <div class="monthly-header">
+                <h2 id="monthName">Loading...</h2>
+                <button id="refreshTotals" class="refresh-icon" title="Refresh totals">🔄</button>
+            </div>
+            <div class="totals-grid">
+                <div class="total-card gbp">
+                    <div class="total-label">GBP Total</div>
+                    <div class="total-amount" id="totalGBP">£0.00</div>
+                </div>
+                <div class="total-card eur">
+                    <div class="total-label">EUR Total</div>
+                    <div class="total-amount" id="totalEUR">€0.00</div>
+                </div>
+            </div>
+            <div class="totals-footer">
+                <span id="entryCount">0 entries</span>
+            </div>
+        </div>
+
+        <!-- Monthly Summary (NEW) -->
+        <section class="section monthly-summary">
+            <div class="summary-header">
+                <h2 id="monthName">Loading...</h2>
+                <button id="refreshSummary" class="refresh-btn" title="Refresh totals">🔄</button>
+            </div>
+            <div class="summary-grid">
+                <div class="summary-card gbp">
+                    <div class="summary-label">GBP Total</div>
+                    <div class="summary-amount" id="totalGBP">£0.00</div>
+                </div>
+                <div class="summary-card eur">
+                    <div class="summary-label">EUR Total</div>
+                    <div class="summary-amount" id="totalEUR">€0.00</div>
+                </div>
+            </div>
+            <div class="summary-footer">
+                <span id="entryCount">0 entries</span>
+                <span id="lastUpdated">Not updated</span>
+            </div>
+        </section>
+
         <!-- Currency Selector -->
         <div class="currency-selector">
             <button class="currency-btn active" data-currency="GBP">£ GBP</button>
