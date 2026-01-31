@@ -21,7 +21,7 @@ const CONFIG = {
 const state = {
     scriptUrl: null,
     selectedCurrency: 'GBP',
-    selectedCost: null,
+    selectedCost: 0, // Changed to 0 instead of null for additive behavior
     selectedMode: null,
     isOnline: navigator.onLine,
     queuedEntries: []
@@ -42,6 +42,7 @@ const elements = {
     costButtons: document.getElementById('costButtons'),
     modeButtons: document.querySelectorAll('.mode-btn'),
     submitBtn: document.getElementById('submitBtn'),
+    resetBtn: document.getElementById('resetBtn'),
     selectedCost: document.getElementById('selectedCost'),
     selectedMode: document.getElementById('selectedMode'),
     recentEntries: document.getElementById('recentEntries'),
@@ -54,7 +55,7 @@ const elements = {
 function init() {
     console.log('🚀 Initializing Travel Cost Tracker...');
     
-    // Check for saved script URL
+    // Check for saved script URL - THIS IS NOW PERSISTENT
     state.scriptUrl = localStorage.getItem(CONFIG.STORAGE_KEYS.SCRIPT_URL);
     
     if (state.scriptUrl) {
@@ -76,6 +77,7 @@ function init() {
     updateOnlineStatus();
     updateQueuedCount();
     renderRecentEntries();
+    updateCostDisplay();
     
     // Register service worker
     registerServiceWorker();
@@ -102,8 +104,9 @@ function setupEventListeners() {
         btn.addEventListener('click', handleModeSelect);
     });
     
-    // Submit
+    // Submit and Reset
     elements.submitBtn.addEventListener('click', handleSubmit);
+    elements.resetBtn.addEventListener('click', handleReset);
     
     // Online/offline events
     window.addEventListener('online', handleOnline);
@@ -138,7 +141,7 @@ function renderCostButtons() {
 function handleCurrencySelect(e) {
     const currency = e.target.dataset.currency;
     state.selectedCurrency = currency;
-    state.selectedCost = null; // Reset cost selection
+    state.selectedCost = 0; // Reset cost when changing currency
     
     // Update UI
     elements.currencyButtons.forEach(btn => {
@@ -146,24 +149,50 @@ function handleCurrencySelect(e) {
     });
     
     renderCostButtons();
-    elements.selectedCost.textContent = '-';
+    updateCostDisplay();
     updateSubmitButton();
 }
 
-// Handle Cost Selection
+// Handle Cost Selection - NOW ADDITIVE
 function handleCostSelect(e) {
     const cost = parseFloat(e.target.dataset.cost);
-    state.selectedCost = cost;
     
-    // Update UI
-    document.querySelectorAll('.cost-btn').forEach(btn => {
-        btn.classList.toggle('active', parseFloat(btn.dataset.cost) === cost);
-    });
+    // ADD to existing total instead of replacing
+    state.selectedCost += cost;
     
-    const symbol = state.selectedCurrency === 'GBP' ? '£' : '€';
-    elements.selectedCost.textContent = `${symbol}${cost}`;
+    // Briefly highlight the clicked button
+    e.target.classList.add('pulse');
+    setTimeout(() => {
+        e.target.classList.remove('pulse');
+    }, 200);
     
+    updateCostDisplay();
     updateSubmitButton();
+}
+
+// Update Cost Display
+function updateCostDisplay() {
+    const symbol = state.selectedCurrency === 'GBP' ? '£' : '€';
+    if (state.selectedCost > 0) {
+        elements.selectedCost.textContent = `${symbol}${state.selectedCost.toFixed(2)}`;
+        elements.selectedCost.classList.add('has-value');
+    } else {
+        elements.selectedCost.textContent = `${symbol}0.00`;
+        elements.selectedCost.classList.remove('has-value');
+    }
+}
+
+// Handle Reset Button
+function handleReset() {
+    state.selectedCost = 0;
+    updateCostDisplay();
+    updateSubmitButton();
+    
+    // Brief visual feedback
+    elements.resetBtn.classList.add('pulse');
+    setTimeout(() => {
+        elements.resetBtn.classList.remove('pulse');
+    }, 200);
 }
 
 // Handle Mode Selection
@@ -184,13 +213,13 @@ function handleModeSelect(e) {
 
 // Update Submit Button State
 function updateSubmitButton() {
-    const isValid = state.selectedCost !== null && state.selectedMode !== null;
+    const isValid = state.selectedCost > 0 && state.selectedMode !== null;
     elements.submitBtn.disabled = !isValid;
 }
 
 // Handle Submit
 async function handleSubmit() {
-    if (!state.selectedCost || !state.selectedMode) {
+    if (state.selectedCost <= 0 || !state.selectedMode) {
         return;
     }
     
@@ -348,7 +377,7 @@ function renderRecentEntries() {
         return `
             <div class="${cardClass}">
                 <div class="entry-header">
-                    <div class="entry-cost">${symbol}${entry.cost}</div>
+                    <div class="entry-cost">${symbol}${entry.cost.toFixed(2)}</div>
                     <div class="entry-mode">${entry.mode}</div>
                 </div>
                 <div class="entry-time">${timeStr}${queuedBadge}</div>
@@ -359,18 +388,14 @@ function renderRecentEntries() {
 
 // Reset Form
 function resetForm() {
-    state.selectedCost = null;
+    state.selectedCost = 0;
     state.selectedMode = null;
-    
-    document.querySelectorAll('.cost-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
     
     elements.modeButtons.forEach(btn => {
         btn.classList.remove('active');
     });
     
-    elements.selectedCost.textContent = '-';
+    updateCostDisplay();
     elements.selectedMode.textContent = '-';
     
     elements.submitBtn.disabled = true;
@@ -452,7 +477,7 @@ function hideInstructions() {
     elements.setupModal.classList.remove('hidden');
 }
 
-// Handle Save Script URL
+// Handle Save Script URL - NOW PERSISTS IN LOCALSTORAGE
 function handleSaveScriptUrl() {
     const url = elements.scriptUrlInput.value.trim();
     
@@ -466,6 +491,7 @@ function handleSaveScriptUrl() {
         return;
     }
     
+    // Save to state AND localStorage for persistence
     state.scriptUrl = url;
     localStorage.setItem(CONFIG.STORAGE_KEYS.SCRIPT_URL, url);
     
@@ -475,11 +501,12 @@ function handleSaveScriptUrl() {
 
 // Handle Settings
 function handleSettings() {
-    const confirmed = confirm('Reset app configuration?\n\nThis will clear your saved Google Apps Script URL.');
+    const confirmed = confirm('Reset app configuration?\n\nThis will clear your saved Google Apps Script URL and you will need to re-enter it.');
     
     if (confirmed) {
         localStorage.removeItem(CONFIG.STORAGE_KEYS.SCRIPT_URL);
         state.scriptUrl = null;
+        elements.scriptUrlInput.value = '';
         showSetup();
     }
 }

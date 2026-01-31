@@ -79,12 +79,15 @@
 
         <!-- Cost Buttons -->
         <section class="section">
-            <h2>Select Amount</h2>
+            <div class="section-header">
+                <h2>Select Amount</h2>
+                <button id="resetBtn" class="reset-btn" title="Reset total">🔄 Reset</button>
+            </div>
             <div class="cost-grid" id="costButtons">
                 <!-- Populated by JS -->
             </div>
-            <div class="selected-display">
-                Selected: <span id="selectedCost">-</span>
+            <div class="selected-display total-display">
+                Total: <span id="selectedCost">£0.00</span>
             </div>
         </section>
 
