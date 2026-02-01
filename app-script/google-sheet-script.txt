@@ -1,0 +1,280 @@
+/**
+ * Google Apps Script Backend for Travel Cost Tracker
+ * Receives POST requests and appends data to the sheet
+ * Provides monthly totals via GET requests
+ */
+
+// Configuration
+const CONFIG = {
+  SHEET_NAME: 'TravelCosts', // Change this to your sheet name
+  TIMEZONE: 'Europe/London'  // Change to your timezone
+};
+
+/**
+ * Handle POST requests from the PWA
+ */
+function doPost(e) {
+  try {
+    // Parse the request
+    const data = JSON.parse(e.postData.contents);
+    
+    // Validate required fields
+    if (!data.timestamp || !data.cost || !data.currency || !data.mode) {
+      return createResponse(false, 'Missing required fields');
+    }
+    
+    // Get or create the sheet
+    const sheet = getOrCreateSheet();
+    
+    // Append the data
+    appendData(sheet, data);
+    
+    // Return success
+    return createResponse(true, 'Entry recorded successfully');
+    
+  } catch (error) {
+    console.error('Error in doPost:', error);
+    return createResponse(false, error.message);
+  }
+}
+
+/**
+ * Handle GET requests (for monthly totals and testing)
+ */
+function doGet(e) {
+  try {
+    const params = e.parameter;
+    
+    // Check if requesting monthly totals
+    if (params.action === 'monthlyTotals') {
+      const year = params.year ? parseInt(params.year) : new Date().getFullYear();
+      const month = params.month ? parseInt(params.month) : new Date().getMonth() + 1;
+      
+      const totals = getMonthlyTotals(year, month);
+      
+      return ContentService.createTextOutput(
+        JSON.stringify({
+          success: true,
+          data: totals,
+          timestamp: new Date().toISOString()
+        })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Default response
+    return ContentService.createTextOutput(
+      JSON.stringify({
+        status: 'ok',
+        message: 'Travel Cost Tracker API is running',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+          post: 'Submit entry',
+          'get?action=monthlyTotals': 'Get current month totals',
+          'get?action=monthlyTotals&year=2026&month=1': 'Get specific month totals'
+        }
+      })
+    ).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    console.error('Error in doGet:', error);
+    return ContentService.createTextOutput(
+      JSON.stringify({
+        success: false,
+        message: error.message,
+        timestamp: new Date().toISOString()
+      })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Get monthly totals for a specific month
+ */
+function getMonthlyTotals(year, month) {
+  const sheet = getOrCreateSheet();
+  const data = sheet.getDataRange().getValues();
+  
+  // Skip header row
+  const entries = data.slice(1);
+  
+  const totals = {
+    year: year,
+    month: month,
+    monthName: getMonthName(month),
+    totalGBP: 0,
+    totalEUR: 0,
+    entryCount: 0,
+    entries: []
+  };
+  
+  // Filter and sum entries for the specified month
+  entries.forEach(row => {
+    if (row.length < 5) return; // Skip incomplete rows
+    
+    const timestamp = row[0]; // Column A: Timestamp
+    const cost = parseFloat(row[3]); // Column D: Cost
+    const currency = row[4]; // Column E: Currency
+    const mode = row[5]; // Column F: Mode
+    
+    if (!timestamp || isNaN(cost)) return;
+    
+    const entryDate = new Date(timestamp);
+    const entryYear = entryDate.getFullYear();
+    const entryMonth = entryDate.getMonth() + 1;
+    
+    // Check if entry is in the specified month
+    if (entryYear === year && entryMonth === month) {
+      totals.entryCount++;
+      
+      if (currency === 'GBP') {
+        totals.totalGBP += cost;
+      } else if (currency === 'EUR') {
+        totals.totalEUR += cost;
+      }
+      
+      // Add to entries array
+      totals.entries.push({
+        date: Utilities.formatDate(entryDate, CONFIG.TIMEZONE, 'yyyy-MM-dd'),
+        cost: cost,
+        currency: currency,
+        mode: mode
+      });
+    }
+  });
+  
+  // Round totals to 2 decimal places
+  totals.totalGBP = Math.round(totals.totalGBP * 100) / 100;
+  totals.totalEUR = Math.round(totals.totalEUR * 100) / 100;
+  
+  return totals;
+}
+
+/**
+ * Get month name from month number
+ */
+function getMonthName(month) {
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  return months[month - 1] || 'Unknown';
+}
+
+/**
+ * Get or create the tracking sheet
+ */
+function getOrCreateSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
+  
+  // Create sheet if it doesn't exist
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.SHEET_NAME);
+    
+    // Add headers
+    const headers = ['Timestamp', 'Date', 'Time', 'Cost', 'Currency', 'Mode', 'User Agent', 'Recorded At'];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    
+    // Format header row
+    sheet.getRange(1, 1, 1, headers.length)
+      .setFontWeight('bold')
+      .setBackground('#2563eb')
+      .setFontColor('#ffffff');
+    
+    // Freeze header row
+    sheet.setFrozenRows(1);
+    
+    // Auto-resize columns
+    sheet.autoResizeColumns(1, headers.length);
+  }
+  
+  return sheet;
+}
+
+/**
+ * Append data to the sheet
+ */
+function appendData(sheet, data) {
+  const timestamp = new Date(data.timestamp);
+  const now = new Date();
+  
+  // Format date and time
+  const dateStr = Utilities.formatDate(timestamp, CONFIG.TIMEZONE, 'yyyy-MM-dd');
+  const timeStr = Utilities.formatDate(timestamp, CONFIG.TIMEZONE, 'HH:mm:ss');
+  const recordedAtStr = Utilities.formatDate(now, CONFIG.TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
+  
+  // Prepare row data
+  const rowData = [
+    timestamp,              // A: Timestamp (for sorting/filtering)
+    dateStr,               // B: Date (formatted)
+    timeStr,               // C: Time (formatted)
+    data.cost,             // D: Cost
+    data.currency,         // E: Currency
+    data.mode,             // F: Transport Mode
+    data.userAgent || '',  // G: User Agent
+    recordedAtStr          // H: When it was recorded
+  ];
+  
+  // Append the row
+  sheet.appendRow(rowData);
+  
+  // Get the last row number
+  const lastRow = sheet.getLastRow();
+  
+  // Format the cost column as currency
+  const costCell = sheet.getRange(lastRow, 4); // Column D
+  if (data.currency === 'GBP') {
+    costCell.setNumberFormat('£#,##0.00');
+  } else if (data.currency === 'EUR') {
+    costCell.setNumberFormat('€#,##0.00');
+  }
+  
+  // Log success
+  console.log(`✅ Appended: ${data.currency}${data.cost} - ${data.mode} at ${dateStr} ${timeStr}`);
+}
+
+/**
+ * Create a JSON response
+ */
+function createResponse(success, message, data = null) {
+  const response = {
+    success: success,
+    message: message,
+    timestamp: new Date().toISOString()
+  };
+  
+  if (data) {
+    response.data = data;
+  }
+  
+  return ContentService
+    .createTextOutput(JSON.stringify(response))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Test function - adds a sample entry
+ */
+function testAddEntry() {
+  const testData = {
+    timestamp: new Date().toISOString(),
+    cost: 25.50,
+    currency: 'GBP',
+    mode: 'Train',
+    userAgent: 'Test'
+  };
+  
+  const sheet = getOrCreateSheet();
+  appendData(sheet, testData);
+  
+  Logger.log('✅ Test entry added successfully');
+}
+
+/**
+ * Test function - get monthly totals
+ */
+function testMonthlyTotals() {
+  const now = new Date();
+  const totals = getMonthlyTotals(now.getFullYear(), now.getMonth() + 1);
+  Logger.log('Monthly Totals:', JSON.stringify(totals, null, 2));
+}
