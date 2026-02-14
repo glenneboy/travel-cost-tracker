@@ -512,10 +512,23 @@ header h1 {
 }
 
 .btn-large {
-    padding: 0.875rem;
-    font-size: 1rem;
+    padding: 0.9375rem;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
     margin: 0.5rem 0.75rem;
     margin-bottom: 5rem;
+    /* width: 100% from .btn + horizontal margins = overflow; subtract margins to stay in bounds */
+    width: calc(100% - 1.5rem);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+.btn-large:not(:disabled):active {
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.btn-primary:disabled {
+    box-shadow: none;
 }
 
 /* Recent Entries */
@@ -811,8 +824,10 @@ header h1 {
     
     /* Recent entries takes less space on desktop */
     .recent-section {
+        width: 100%;         /* percentage of viewport for fixed element */
         max-width: 600px;
         left: 50%;
+        right: auto;         /* clear the base right: 0 so width isn't viewport/2 */
         transform: translateX(-50%);
     }
     
