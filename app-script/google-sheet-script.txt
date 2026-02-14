@@ -168,28 +168,31 @@ function getMonthName(month) {
 function getOrCreateSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
-  
+
   // Create sheet if it doesn't exist
   if (!sheet) {
     sheet = ss.insertSheet(CONFIG.SHEET_NAME);
-    
-    // Add headers
+  }
+
+  // Write headers if the sheet is empty (new sheet or headers were deleted)
+  const firstCell = sheet.getRange(1, 1).getValue();
+  if (!firstCell) {
     const headers = ['Timestamp', 'Date', 'Time', 'Cost', 'Currency', 'Mode', 'Notes', 'User Agent', 'Recorded At'];
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    
+
     // Format header row
     sheet.getRange(1, 1, 1, headers.length)
       .setFontWeight('bold')
       .setBackground('#2563eb')
       .setFontColor('#ffffff');
-    
+
     // Freeze header row
     sheet.setFrozenRows(1);
-    
+
     // Auto-resize columns
     sheet.autoResizeColumns(1, headers.length);
   }
-  
+
   return sheet;
 }
 
