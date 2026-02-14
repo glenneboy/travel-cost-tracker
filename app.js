@@ -23,6 +23,7 @@ const state = {
     selectedCurrency: 'GBP',
     selectedCost: 0, // Changed to 0 instead of null for additive behavior
     selectedMode: null,
+    note: '',
     isOnline: navigator.onLine,
     queuedEntries: []
 };
@@ -58,6 +59,7 @@ function initElements() {
     elements.totalEUR = document.getElementById('totalEUR');
     elements.entryCount = document.getElementById('entryCount');
     elements.refreshTotals = document.getElementById('refreshTotals');
+    elements.noteInput = document.getElementById('noteInput');
 }
 
 // Initialize App
@@ -262,6 +264,7 @@ async function handleSubmit() {
         cost: state.selectedCost,
         currency: state.selectedCurrency,
         mode: state.selectedMode,
+        note: elements.noteInput ? elements.noteInput.value.trim() : '',
         userAgent: navigator.userAgent
     };
     
@@ -424,6 +427,8 @@ function renderRecentEntries() {
         const queuedBadge = entry.queued ? '<span class="entry-badge">QUEUED</span>' : '';
         const cardClass = entry.queued ? 'entry-card queued' : 'entry-card';
         
+        const noteHtml = entry.note ? `<div class="entry-note">${entry.note}</div>` : '';
+
         return `
             <div class="${cardClass}">
                 <div class="entry-header">
@@ -431,6 +436,7 @@ function renderRecentEntries() {
                     <div class="entry-mode">${entry.mode}</div>
                 </div>
                 <div class="entry-time">${timeStr}${queuedBadge}</div>
+                ${noteHtml}
             </div>
         `;
     }).join('');
@@ -440,13 +446,18 @@ function renderRecentEntries() {
 function resetForm() {
     state.selectedCost = 0;
     state.selectedMode = null;
-    
+    state.note = '';
+
     elements.modeButtons.forEach(btn => {
         btn.classList.remove('active');
     });
-    
+
+    if (elements.noteInput) {
+        elements.noteInput.value = '';
+    }
+
     updateCostDisplay();
-    
+
     elements.submitBtn.disabled = true;
     elements.submitBtn.textContent = '📝 Record Entry';
 }

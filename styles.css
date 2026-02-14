@@ -821,6 +821,45 @@ header h1 {
     }
 }
 
+/* Notes Input */
+.optional-label {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+
+.note-input {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-family: inherit;
+    resize: none;
+    color: var(--text);
+    background: var(--bg);
+    transition: border-color 0.2s;
+    line-height: 1.5;
+}
+
+.note-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--surface);
+}
+
+.note-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.entry-note {
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
 /* Touch Feedback */
 @media (hover: none) {
     .cost-btn:active,

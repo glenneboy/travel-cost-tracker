@@ -115,6 +115,7 @@ function getMonthlyTotals(year, month) {
     const cost = parseFloat(row[3]); // Column D: Cost
     const currency = row[4]; // Column E: Currency
     const mode = row[5]; // Column F: Mode
+    const note = row[6] || ''; // Column G: Notes
     
     if (!timestamp || isNaN(cost)) return;
     
@@ -137,7 +138,8 @@ function getMonthlyTotals(year, month) {
         date: Utilities.formatDate(entryDate, CONFIG.TIMEZONE, 'yyyy-MM-dd'),
         cost: cost,
         currency: currency,
-        mode: mode
+        mode: mode,
+        note: note
       });
     }
   });
@@ -172,7 +174,7 @@ function getOrCreateSheet() {
     sheet = ss.insertSheet(CONFIG.SHEET_NAME);
     
     // Add headers
-    const headers = ['Timestamp', 'Date', 'Time', 'Cost', 'Currency', 'Mode', 'User Agent', 'Recorded At'];
+    const headers = ['Timestamp', 'Date', 'Time', 'Cost', 'Currency', 'Mode', 'Notes', 'User Agent', 'Recorded At'];
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     
     // Format header row
@@ -211,8 +213,9 @@ function appendData(sheet, data) {
     data.cost,             // D: Cost
     data.currency,         // E: Currency
     data.mode,             // F: Transport Mode
-    data.userAgent || '',  // G: User Agent
-    recordedAtStr          // H: When it was recorded
+    data.note || '',       // G: Notes
+    data.userAgent || '',  // H: User Agent
+    recordedAtStr          // I: When it was recorded
   ];
   
   // Append the row
@@ -230,7 +233,8 @@ function appendData(sheet, data) {
   }
   
   // Log success
-  console.log(`✅ Appended: ${data.currency}${data.cost} - ${data.mode} at ${dateStr} ${timeStr}`);
+  const noteLog = data.note ? ` (${data.note})` : '';
+  console.log(`✅ Appended: ${data.currency}${data.cost} - ${data.mode}${noteLog} at ${dateStr} ${timeStr}`);
 }
 
 /**
@@ -261,6 +265,7 @@ function testAddEntry() {
     cost: 25.50,
     currency: 'GBP',
     mode: 'Train',
+    note: 'Test entry',
     userAgent: 'Test'
   };
   
