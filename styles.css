@@ -783,11 +783,16 @@ header h1 {
     .section {
         padding: 1.25rem;
     }
-    
+
+    /* recent-section shares the .section class — cancel the padding override */
+    .recent-section {
+        padding: 0;
+    }
+
     .monthly-totals {
         padding: 0.875rem 1rem;
     }
-    
+
     body {
         padding-bottom: 7rem;
     }
@@ -822,13 +827,15 @@ header h1 {
         font-size: 1.25rem;
     }
     
-    /* Recent entries takes less space on desktop */
+    /* Recent entries — cancel margins/padding inherited from .section media query */
     .recent-section {
-        width: 100%;         /* percentage of viewport for fixed element */
-        max-width: 600px;
-        left: 50%;
-        right: auto;         /* clear the base right: 0 so width isn't viewport/2 */
-        transform: translateX(-50%);
+        margin: 0;
+        padding: 0;
+        /* Mirror body's centering exactly: left = right = (50vw - 300px) */
+        left: calc(50% - 300px);
+        right: calc(50% - 300px);
+        transform: none;
+        width: auto;
     }
     
     .btn-large {
