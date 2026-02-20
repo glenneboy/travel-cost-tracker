@@ -326,16 +326,21 @@ async function handleSubmit() {
     elements.submitBtn.disabled = true;
     elements.submitBtn.textContent = '⏳ Recording...';
     
-    // Create entry — keep original field order intact so existing Apps Script
-    // Object.values() mappings aren't disrupted; date goes at the end
+    // Build timestamp using the selected expense date but current time of day.
+    // This keeps the same field structure the Apps Script already expects —
+    // no new fields, no column shifts.
+    const now = new Date();
+    const [ey, em, ed] = state.selectedDate.split('-').map(Number);
+    const expenseTimestamp = new Date(ey, em - 1, ed,
+        now.getHours(), now.getMinutes(), now.getSeconds()).toISOString();
+
     const entry = {
-        timestamp: new Date().toISOString(),
+        timestamp: expenseTimestamp,
         cost: state.selectedCost,
         currency: state.selectedCurrency,
         mode: state.selectedMode,
         note: elements.noteInput ? elements.noteInput.value.trim() : '',
-        userAgent: navigator.userAgent,
-        date: state.selectedDate
+        userAgent: navigator.userAgent
     };
     
     try {
