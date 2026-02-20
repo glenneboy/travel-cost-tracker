@@ -24,9 +24,19 @@ const state = {
     selectedCost: 0, // Changed to 0 instead of null for additive behavior
     selectedMode: null,
     note: '',
+    selectedDate: getTodayDateString(),
     isOnline: navigator.onLine,
     queuedEntries: []
 };
+
+// Get today as YYYY-MM-DD in local time
+function getTodayDateString() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
 
 // DOM Elements - will be initialized when DOM is ready
 const elements = {};
@@ -60,6 +70,10 @@ function initElements() {
     elements.entryCount = document.getElementById('entryCount');
     elements.refreshTotals = document.getElementById('refreshTotals');
     elements.noteInput = document.getElementById('noteInput');
+    elements.dateDisplay = document.getElementById('dateDisplay');
+    elements.dateToggleBtn = document.getElementById('dateToggleBtn');
+    elements.dateInputRow = document.getElementById('dateInputRow');
+    elements.dateInput = document.getElementById('dateInput');
 }
 
 // Initialize App
@@ -99,6 +113,9 @@ function init() {
         }, 100);
     }
     
+    // Setup date picker
+    setupDatePicker();
+
     // Register service worker
     registerServiceWorker();
 }
@@ -151,6 +168,14 @@ function setupEventListeners() {
             handleSaveScriptUrl();
         }
     });
+
+    // Date picker toggle
+    if (elements.dateToggleBtn) {
+        elements.dateToggleBtn.addEventListener('click', toggleDatePicker);
+    }
+    if (elements.dateInput) {
+        elements.dateInput.addEventListener('change', handleDateChange);
+    }
 }
 
 // Render Cost Buttons
@@ -228,6 +253,49 @@ function handleReset() {
     }, 200);
 }
 
+// Setup Date Picker
+function setupDatePicker() {
+    elements.dateInput.value = state.selectedDate;
+    updateDateDisplay();
+}
+
+// Toggle date picker visibility
+function toggleDatePicker() {
+    const isHidden = elements.dateInputRow.classList.contains('hidden');
+    if (isHidden) {
+        elements.dateInputRow.classList.remove('hidden');
+        elements.dateToggleBtn.textContent = 'Done';
+        elements.dateInput.focus();
+    } else {
+        elements.dateInputRow.classList.add('hidden');
+        elements.dateToggleBtn.textContent = 'Change';
+    }
+}
+
+// Handle date change
+function handleDateChange() {
+    state.selectedDate = elements.dateInput.value || getTodayDateString();
+    updateDateDisplay();
+    elements.dateInputRow.classList.add('hidden');
+    elements.dateToggleBtn.textContent = 'Change';
+}
+
+// Update date display text
+function updateDateDisplay() {
+    const today = getTodayDateString();
+    if (state.selectedDate === today) {
+        elements.dateDisplay.textContent = 'Today';
+    } else {
+        const [y, m, d] = state.selectedDate.split('-').map(Number);
+        const date = new Date(y, m - 1, d);
+        elements.dateDisplay.textContent = date.toLocaleDateString('en-GB', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short'
+        });
+    }
+}
+
 // Handle Mode Selection
 function handleModeSelect(e) {
     const btn = e.currentTarget;
@@ -258,14 +326,16 @@ async function handleSubmit() {
     elements.submitBtn.disabled = true;
     elements.submitBtn.textContent = '⏳ Recording...';
     
-    // Create entry
+    // Create entry — keep original field order intact so existing Apps Script
+    // Object.values() mappings aren't disrupted; date goes at the end
     const entry = {
         timestamp: new Date().toISOString(),
         cost: state.selectedCost,
         currency: state.selectedCurrency,
         mode: state.selectedMode,
         note: elements.noteInput ? elements.noteInput.value.trim() : '',
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        date: state.selectedDate
     };
     
     try {
@@ -447,6 +517,7 @@ function resetForm() {
     state.selectedCost = 0;
     state.selectedMode = null;
     state.note = '';
+    state.selectedDate = getTodayDateString();
 
     elements.modeButtons.forEach(btn => {
         btn.classList.remove('active');
@@ -456,6 +527,10 @@ function resetForm() {
         elements.noteInput.value = '';
     }
 
+    if (elements.dateInput) elements.dateInput.value = state.selectedDate;
+    if (elements.dateInputRow) elements.dateInputRow.classList.add('hidden');
+    if (elements.dateToggleBtn) elements.dateToggleBtn.textContent = 'Change';
+    updateDateDisplay();
     updateCostDisplay();
 
     elements.submitBtn.disabled = true;

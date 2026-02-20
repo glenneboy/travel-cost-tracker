@@ -118,9 +118,8 @@
             </div>
         </section>
 
-        <!-- Transport Mode -->
+        <!-- Transport Mode + Notes combined -->
         <section class="section">
-            <h2>Transport Mode</h2>
             <div class="mode-grid">
                 <button class="mode-btn" data-mode="Flight">
                     <span class="icon">✈️</span>
@@ -139,18 +138,22 @@
                     <span>Bus</span>
                 </button>
             </div>
-        </section>
-
-        <!-- Notes -->
-        <section class="section">
-            <h2>Notes <span class="optional-label">(optional)</span></h2>
-            <textarea
-                id="noteInput"
-                class="note-input"
-                placeholder="What's this trip for?"
-                maxlength="200"
-                rows="2"
-            ></textarea>
+            <div class="extras-row">
+                <textarea
+                    id="noteInput"
+                    class="note-input"
+                    placeholder="Notes (optional)"
+                    maxlength="200"
+                    rows="2"
+                ></textarea>
+                <div class="date-bar" id="dateBar">
+                    <span class="date-label">📅 <span id="dateDisplay">Today</span></span>
+                    <button class="date-change-btn" id="dateToggleBtn">Change</button>
+                </div>
+                <div class="date-input-row hidden" id="dateInputRow">
+                    <input type="date" id="dateInput" class="date-input">
+                </div>
+            </div>
         </section>
 
         <!-- Submit Button -->
